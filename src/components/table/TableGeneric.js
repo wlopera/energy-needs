@@ -13,8 +13,8 @@ function TableGeneric({ title, columns, data }) {
           </tr>
         </thead>
         <tbody>
-          {data.map((row) => (
-            <Tr key={row.id}>
+          {data.map((row, index) => (
+            <Tr key={index} $isTotal={row.item === "TOTAL"}>
               {columns.map((column) => (
                 <Td
                   key={column.key}
@@ -25,6 +25,7 @@ function TableGeneric({ title, columns, data }) {
                       ? "center"
                       : "center"
                   }
+                  $isTotal={row.item === "TOTAL"}
                 >
                   {row[column.key]}
                 </Td>
@@ -87,7 +88,15 @@ const Th = styled.th`
   text-align: center;
 `;
 
-const Tr = styled.tr``;
+const Tr = styled.tr`
+  ${(props) =>
+    props.$isTotal &&
+    `
+    background-color: #28a745 !important;
+    color: white;
+    font-weight: bold;
+  `}
+`;
 
 const Td = styled.td`
   padding: 8px 12px;
@@ -96,4 +105,13 @@ const Td = styled.td`
   word-wrap: break-word;
   white-space: normal;
   max-width: 600px; /* Limita el ancho máximo de cada celda */
+
+  ${(props) =>
+    props.$isTotal &&
+    `
+    background-color: #28a745 !important;
+    color: white;
+    font-weight: bold;
+    border-color: #1e7e34;
+  `}
 `;

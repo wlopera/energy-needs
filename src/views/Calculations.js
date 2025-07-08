@@ -8,21 +8,26 @@ import TableGeneric from "../components/table/TableGeneric";
 
 function Calculations() {
   const [formValues, setFormValues] = useState({
-    name: "",
-    age: "",
-    weight: "",
-    height: "",
-    fvf: "",
-    activityCategory: "",
-    activityValue: "",
-    TBM: null,
-    RCT: null,
+    name: "Carolina",
+    age: "45",
+    weight: "81",
+    height: "171",
+    fvf: "1.5",
+    activityCategory: "Hipocalórica",
+    activityValue: "10",
   });
+  const [TBM, setTBM] = useState(null);
+  const [RCT, setRCT] = useState(0);
 
-  const [energyNeeds, setEnergyNeeds] = useState([]);
+  const [energyNeeds, setEnergyNeeds] = useState({
+    proteins: "",
+    carbohydrates: "",
+    fats: "",
+  });
+  const [macroTableData, setMacroTableData] = useState([]);
 
+  const [calcTBMValid, setCalcTBMValid] = useState(false);
   const [distributionValid, setDistributionValid] = useState(false);
-
   const [fvfs, setFvfs] = useState([]);
 
   useEffect(() => {
@@ -42,6 +47,34 @@ function Calculations() {
     setFormValues((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Validar campos TBM cuando cambien los valores del formulario
+  useEffect(() => {
+    const requiredFields = [
+      "name",
+      "age",
+      "weight",
+      "height",
+      "fvf",
+      "activityCategory",
+      "activityValue",
+    ];
+    const isValid = requiredFields.every(
+      (field) => formValues[field] && formValues[field].toString().trim() !== ""
+    );
+
+    setCalcTBMValid(isValid);
+
+    setRCT(0);
+    // Solo ocultar la tabla de macronutrientes cuando RCT vuelve a 0
+    setDistributionValid(false);
+  }, [formValues]);
+
+  const validateDistributionFields = useCallback(() => {
+    return (
+      energyNeeds.proteins && energyNeeds.carbohydrates && energyNeeds.fats
+    );
+  }, [energyNeeds]);
+
   const handleNestedChange = ({ category, value }) => {
     setFormValues((v) => ({
       ...v,
@@ -53,12 +86,12 @@ function Calculations() {
   const handleCaloricDistributionChange = useCallback((values) => {
     if (values) {
       setDistributionValid(true);
-      setEnergyNeeds((prev) => ({
-        ...prev,
+      setEnergyNeeds({
         proteins: values.proteins,
         carbohydrates: values.carbohydrates,
         fats: values.fats,
-      }));
+      });
+      setDistributionValid(true);
     } else {
       setDistributionValid(false);
     }
@@ -73,7 +106,7 @@ function Calculations() {
         1.8 * formValues.height -
         4.6 * formValues.age) *
       formValues.fvf;
-    setFormValues((prev) => ({ ...prev, TBM: computedTbm.toFixed(3) }));
+    setTBM(computedTbm.toFixed(3));
 
     const active =
       formValues.activityCategory === "Hipocalórica"
@@ -81,33 +114,86 @@ function Calculations() {
         : formValues.activityValue;
 
     const computedTDC = computedTbm + (computedTbm * active) / 100;
+    setRCT(computedTDC.toFixed(3));
+  };
 
-    setFormValues((prev) => ({
-      ...prev,
-      RCT: computedTDC.toFixed(3),
-    }));
+  const caloricDistribution = useCallback(() => {
+    if (!validateDistributionFields()) {
+      alert("Por favor, complete la distribución calórica antes de calcular.");
+      return;
+    }
 
-    setEnergyNeeds([
+    if (!RCT || RCT <= 0) {
+      alert(
+        "Debe calcular el TBM primero antes de calcular la distribución calórica."
+      );
+      return;
+    }
+
+    const computedTDC = RCT;
+    const carbKcal = ((computedTDC * energyNeeds.carbohydrates) / 100).toFixed(
+      2
+    );
+    const carbGrams = (
+      (computedTDC * energyNeeds.carbohydrates) /
+      100 /
+      4
+    ).toFixed(0);
+    const proteinKcal = ((computedTDC * energyNeeds.proteins) / 100).toFixed(2);
+    const proteinGrams = (
+      (computedTDC * energyNeeds.proteins) /
+      100 /
+      4
+    ).toFixed(0);
+    const fatKcal = ((computedTDC * energyNeeds.fats) / 100).toFixed(2);
+    const fatGrams = ((computedTDC * energyNeeds.fats) / 100 / 9).toFixed(0);
+
+    setMacroTableData([
       {
         item: "Carbohidratos",
         percentage: energyNeeds.carbohydrates,
-        kcal: ((computedTDC * energyNeeds.carbohydrates) / 100).toFixed(2),
-        grams: ((computedTDC * energyNeeds.carbohydrates) / 100 / 4).toFixed(0),
+        kcal: carbKcal,
+        grams: carbGrams,
       },
       {
         item: "Proteínas",
         percentage: energyNeeds.proteins,
-        kcal: ((computedTDC * energyNeeds.proteins) / 100).toFixed(2),
-        grams: ((computedTDC * energyNeeds.proteins) / 100 / 4).toFixed(0),
+        kcal: proteinKcal,
+        grams: proteinGrams,
       },
       {
         item: "Grasas",
         percentage: energyNeeds.fats,
-        kcal: ((computedTDC * energyNeeds.fats) / 100).toFixed(2),
-        grams: ((computedTDC * energyNeeds.fats) / 100 / 9).toFixed(0),
+        kcal: fatKcal,
+        grams: fatGrams,
+      },
+      {
+        item: "TOTAL",
+        percentage: "100",
+        kcal: (
+          parseFloat(carbKcal) +
+          parseFloat(proteinKcal) +
+          parseFloat(fatKcal)
+        ).toFixed(2),
+        grams: (
+          parseInt(carbGrams) +
+          parseInt(proteinGrams) +
+          parseInt(fatGrams)
+        ).toString(),
       },
     ]);
-  };
+  }, [RCT, energyNeeds, validateDistributionFields]);
+
+  useEffect(() => {
+    if (distributionValid) caloricDistribution();
+  }, [distributionValid, caloricDistribution]);
+
+  // Recalcular macronutrientes cuando RCT cambie y ya haya distribución válida
+  useEffect(() => {
+    if (RCT > 0 && distributionValid) {
+      caloricDistribution();
+    }
+  }, [RCT, distributionValid, caloricDistribution]);
 
   return (
     <FormContainer>
@@ -186,26 +272,35 @@ function Calculations() {
 
         <Row>
           <NestedField>
-            <NestedDropdown onChange={handleNestedChange} />
+            <NestedDropdown
+              onChange={handleNestedChange}
+              initialCategory={formValues.activityCategory}
+              initialValue={formValues.activityValue}
+            />
           </NestedField>
         </Row>
         <Row>
-          <CaloricTotalTitle>
-            Requerimiento Calórico Total: {formValues.RCT} kcal
+          <SubmitButton type="submit" disabled={!calcTBMValid}>
+            Calcular TBM
+          </SubmitButton>
+          <CaloricTotalTitle $isNull={RCT === 0}>
+            {RCT === 0
+              ? "Calcular las calorías totales"
+              : `Requerimiento Calórico Total: ${RCT} kcal`}
           </CaloricTotalTitle>
         </Row>
-        <Row>
-          <Field style={{ flex: 1 }}>
-            <CaloricDistributionTable
-              onChange={handleCaloricDistributionChange}
-            />
-          </Field>
-        </Row>
-        <SubmitButton type="submit" disabled={!distributionValid}>
-          Calcular TBM
-        </SubmitButton>
+        {RCT > 0 && (
+          <Row>
+            <Field style={{ flex: 1 }}>
+              <CaloricDistributionTable
+                onChange={handleCaloricDistributionChange}
+                RCT={RCT}
+              />
+            </Field>
+          </Row>
+        )}
       </StyledForm>
-      {formValues.TBM !== null && (
+      {distributionValid && (
         <div>
           <TableGeneric
             title="Distribución de Macronutrientes"
@@ -215,13 +310,15 @@ function Calculations() {
               { key: "kcal", label: "Kcal", asign: "CENTER" },
               { key: "grams", label: "Gramos", asign: "CENTER" },
             ]}
-            data={energyNeeds}
+            data={macroTableData}
           />
 
           <Preview>
             <h4>Tasa Metabólica Basal:</h4>
             <pre>{JSON.stringify(formValues, null, 2)}</pre>
             <pre>{JSON.stringify(energyNeeds, null, 2)}</pre>
+            <pre>{"TBM: " + TBM}</pre>
+            <pre>{"RCT: " + RCT}</pre>
           </Preview>
         </div>
       )}
@@ -333,9 +430,9 @@ const Preview = styled.div`
 const CaloricTotalTitle = styled.h4`
   margin-top: 16px;
   font-size: 1.2rem;
-  color: #007bff;
+  color: ${(props) => (props.$isNull ? "#dc3545" : "#007bff")};
   text-align: center;
-  background-color: #e9f5ff;
+  background-color: ${(props) => (props.$isNull ? "#f8d7da" : "#e9f5ff")};
   padding: 10px 14px;
   border-radius: 6px;
 `;

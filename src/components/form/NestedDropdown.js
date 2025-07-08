@@ -1,8 +1,12 @@
 // src/components/NestedDropdown.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 
-export default function NestedDropdown({ onChange }) {
+export default function NestedDropdown({
+  onChange,
+  initialCategory = "",
+  initialValue = "",
+}) {
   const categories = [
     { label: "Hipocalórica", max: 30 },
     // { label: "Normocalórica", max: 25 },
@@ -10,8 +14,14 @@ export default function NestedDropdown({ onChange }) {
   ];
   const allValues = [5, 10, 15, 20, 25, 30];
 
-  const [category, setCategory] = useState("");
-  const [value, setValue] = useState("");
+  const [category, setCategory] = useState(initialCategory);
+  const [value, setValue] = useState(initialValue);
+
+  // Actualizar el estado cuando cambien los valores iniciales
+  useEffect(() => {
+    setCategory(initialCategory);
+    setValue(initialValue);
+  }, [initialCategory, initialValue]);
 
   const filtered = category
     ? allValues.filter(

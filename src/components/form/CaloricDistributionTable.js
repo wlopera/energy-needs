@@ -13,7 +13,7 @@ const macros = [
   { label: "Grasas (20-35)", key: "fats", values: [20, 25, 30, 35] },
 ];
 
-export default function CaloricDistributionTable({ onChange }) {
+export default function CaloricDistributionTable({ onChange, RCT }) {
   const [values, setValues] = useState({
     proteins: "",
     carbohydrates: "",
@@ -21,6 +21,7 @@ export default function CaloricDistributionTable({ onChange }) {
   });
 
   const [error, setError] = useState("");
+  const [isValid, setIsValid] = useState(false);
 
   useEffect(() => {
     const { proteins, carbohydrates, fats } = values;
@@ -32,11 +33,15 @@ export default function CaloricDistributionTable({ onChange }) {
         setError(
           `Distribución calorica seleccionada=${sum}% debe ser exactamente 100%`
         );
+        setIsValid(false);
         onChange?.(null);
       } else {
         setError("");
+        setIsValid(true);
         onChange?.(values);
       }
+    } else {
+      setIsValid(false);
     }
   }, [values, onChange]);
 
@@ -49,7 +54,9 @@ export default function CaloricDistributionTable({ onChange }) {
 
   return (
     <Wrapper>
-      <Title>Distribución Calórica</Title>
+      <TitleRow>
+        <Title>Distribución Calórica</Title>
+      </TitleRow>
       <Table>
         <tbody>
           {macros.map((macro) => (
@@ -112,4 +119,28 @@ const ErrorMsg = styled.div`
   margin-top: 10px;
   color: red;
   font-weight: 500;
+`;
+
+const TitleRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+`;
+
+const CalculateButton = styled.button`
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  color: #fff;
+  background-color: #28a745;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  &:hover {
+    background-color: #218838;
+  }
+  &:disabled {
+    background-color: #a0a0a0;
+    cursor: not-allowed;
+  }
 `;
